@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kartu Warna: dari Foto ke Kode HEX</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #E8E3D5;
+    --paper-dark: #DCD4BE;
+    --paper-hover: #E1D9C1;
+    --ink: #201F1D;
+    --ink-soft: #5B574C;
+    --line: #C2B9A4;
+    --accent: #D6432B;
+    --accent-ink: #FFF7EE;
+    --shadow: rgba(32,31,29,0.16);
+    --overlay: rgba(232,227,213,0.9);
+    --radius-lg: 14px;
+    --radius-md: 8px;
+    --radius-sm: 6px;
+    --font-display: 'Oswald', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    color-scheme: light;
+  }
+
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper: #17140F;
+      --paper-dark: #201B13;
+      --paper-hover: #29231A;
+      --ink: #F1EDE3;
+      --ink-soft: #B3A990;
+      --line: #3B3325;
+      --accent: #FF7A54;
+      --accent-ink: #1B0F09;
+      --shadow: rgba(0,0,0,0.5);
+      --overlay: rgba(23,20,15,0.9);
+      color-scheme: dark;
+    }
+  }
+
+  *{ box-sizing:border-box; }
+
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 1px 1px, rgba(128,120,100,0.14) 1px, transparent 0) 0 0/22px 22px,
+      var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap{
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  header{
+    margin-bottom: 36px;
+  }
+
+  .eyebrow{
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+
+  h1{
+    font-family: var(--font-display);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    font-size: clamp(34px, 6vw, 56px);
+    line-height: 1.02;
+    margin: 0 0 14px;
+  }
+
+  header p{
+    max-width: 54ch;
+    color: var(--ink-soft);
+    font-size: 15.5px;
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  /* --- Dropzone / meja cahaya --- */
+  .dropzone{
+    position: relative;
+    border: 2px dashed var(--line);
+    border-radius: var(--radius-lg);
+    padding: 46px 24px;
+    text-align: center;
+    cursor: pointer;
+    background: var(--paper-dark);
+    transition: border-color .18s ease, background .18s ease;
+  }
+  .dropzone:hover, .dropzone.drag{
+    border-color: var(--accent);
+    background: var(--paper-hover);
+  }
+  .dropzone svg{ width:34px; height:34px; color: var(--ink-soft); margin-bottom: 12px; }
+  .dropzone .dz-title{
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    font-size: 18px;
+    margin-bottom: 4px;
+  }
+  .dropzone .dz-sub{
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  #fileInput{ display:none; }
+
+  /* --- Preview strip --- */
+  .preview-row{
+    display:none;
+    align-items:center;
+    gap:16px;
+    margin-top: 18px;
+  }
+  .preview-row.show{ display:flex; }
+  .preview-thumb{
+    width: 64px; height: 64px;
+    border-radius: var(--radius-md);
+    object-fit: cover;
+    border: 1px solid var(--line);
+    box-shadow: 0 4px 10px var(--shadow);
+    transform: rotate(-2deg);
+  }
+  .preview-meta{
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink-soft);
+    flex: 1;
+  }
+  .btn{
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--ink);
+    color: var(--ink);
+    padding: 9px 14px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease, transform .1s ease;
+  }
+  .btn:hover{ background: var(--ink); color: var(--paper); }
+  .btn:active{ transform: translateY(1px) scale(.98); }
+  .btn.primary{ border-color: var(--accent); color: var(--accent-ink); background: var(--accent); }
+  .btn.primary:hover{ filter: brightness(0.9); }
+
+  /* --- Status --- */
+  .status{
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    margin: 18px 2px;
+    min-height: 18px;
+  }
+
+  /* --- Palette section --- */
+  .palette-head{
+    display:flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin: 34px 0 16px;
+    display:none;
+  }
+  .palette-head.show{ display:flex; }
+  .palette-head h2{
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: .02em;
+    font-size: 20px;
+    margin: 0;
+  }
+
+  .grid{
+    display:none;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 22px;
+  }
+  .grid.show{ display:grid; }
+
+  .chip{
+    position: relative;
+    background: var(--paper-dark);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding-top: 14px;
+    box-shadow: 0 6px 14px var(--shadow);
+    cursor: pointer;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(10px);
+    animation: rise .5s ease forwards;
+    transition: transform .18s ease, box-shadow .18s ease;
+  }
+  .chip:hover{ transform: translateY(-3px); box-shadow: 0 10px 20px var(--shadow); }
+  .chip:active{ transform: translateY(-1px) scale(.98); }
+  @media (prefers-reduced-motion: reduce){
+    .chip{ animation: none; opacity:1; transform:none; }
+    .chip:hover, .chip:active{ transform: none; }
+  }
+  @keyframes rise{ to{ opacity:1; transform: translateY(0); } }
+
+  .chip .hole{
+    width: 16px; height: 16px;
+    margin: 0 auto 10px;
+    border-radius: 50%;
+    background: var(--paper);
+    box-shadow: inset 0 2px 3px rgba(0,0,0,0.28);
+  }
+
+  .chip .swatch{
+    height: 92px;
+    margin: 0 12px;
+    border-radius: var(--radius-sm);
+  }
+
+  .chip .tear{
+    border-top: 2px dashed var(--line);
+    margin: 12px 12px 0;
+  }
+
+  .chip .body{ padding: 10px 12px 14px; }
+
+  .chip .name{
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: capitalize;
+    margin-bottom: 6px;
+  }
+  .chip .hex{
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: .02em;
+  }
+  .chip .rgb{
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+    margin-top: 3px;
+  }
+
+  .chip .pct{
+    position: absolute;
+    top: 10px; right: 10px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    padding: 2px 6px;
+    border-radius: 999px;
+    color: var(--ink-soft);
+  }
+
+  .chip .stamp{
+    position: absolute;
+    inset: 0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background: var(--overlay);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .15s ease;
+  }
+  .chip.copied .stamp{ opacity: 1; }
+  .chip .stamp span{
+    font-family: var(--font-display);
+    font-size: 15px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 2px solid var(--accent);
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    transform: rotate(-6deg);
+  }
+
+  .actions{
+    display:none;
+    justify-content: flex-end;
+    margin-top: 22px;
+  }
+  .actions.show{ display:flex; }
+
+  footer{
+    margin-top: 60px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--ink-soft);
+  }
+
+  canvas{ display:none; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="eyebrow">Laboratorium Warna</div>
+      <h1>Kartu Warna</h1>
+      <p>Unggah gambar apa saja. Kartu Warna mengekstrak warna dominannya jadi kartu-kartu cetak lengkap dengan nama, kode HEX, dan RGB.</p>
+    </header>
+
+    <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Unggah gambar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4M12 4l-4 4M12 4l4 4"/><path d="M4 16v3a2 2 0 002 2h12a2 2 0 002-2v-3"/></svg>
+      <div class="dz-title">Jatuhkan gambar di sini</div>
+      <div class="dz-sub">atau klik untuk memilih file · JPG · PNG · WEBP</div>
+      <input type="file" id="fileInput" accept="image/*">
+    </div>
+
+    <div class="preview-row" id="previewRow">
+      <img class="preview-thumb" id="previewThumb" alt="Pratinjau gambar">
+      <div class="preview-meta" id="previewMeta"></div>
+      <button class="btn" id="changeBtn">Ganti Gambar</button>
+    </div>
+
+    <div class="status" id="status"></div>
+
+    <div class="palette-head" id="paletteHead">
+      <h2>Hasil Cetak</h2>
+    </div>
+    <div class="grid" id="grid"></div>
+
+    <div class="actions" id="actions">
+      <button class="btn primary" id="copyAllBtn">Salin Semua Kode</button>
+    </div>
+
+    <footer>
+      Semua proses berjalan langsung di browser Anda. Gambar tidak diunggah ke server mana pun.
+    </footer>
+  </div>
+
+  <canvas id="canvas"></canvas>
+
+  <script>
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const previewRow = document.getElementById('previewRow');
+    const previewThumb = document.getElementById('previewThumb');
+    const previewMeta = document.getElementById('previewMeta');
+    const changeBtn = document.getElementById('changeBtn');
+    const statusEl = document.getElementById('status');
+    const paletteHead = document.getElementById('paletteHead');
+    const grid = document.getElementById('grid');
+    const actions = document.getElementById('actions');
+    const copyAllBtn = document.getElementById('copyAllBtn');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+    const K = 6; // jumlah warna dalam kartu
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' ') fileInput.click(); });
+    changeBtn.addEventListener('click', () => fileInput.click());
+
+    ['dragenter','dragover'].forEach(evt =>
+      dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.add('drag'); })
+    );
+    ['dragleave','drop'].forEach(evt =>
+      dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.remove('drag'); })
+    );
+    dropzone.addEventListener('drop', e => {
+      const file = e.dataTransfer.files[0];
+      if (file) handleFile(file);
+    });
+    fileInput.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (file) handleFile(file);
+    });
+
+    function handleFile(file){
+      if (!file.type.startsWith('image/')){
+        statusEl.textContent = 'Berkas ini bukan gambar. Coba unggah JPG, PNG, atau WEBP.';
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        previewThumb.src = url;
+        previewMeta.textContent = `${file.name} · ${img.naturalWidth}×${img.naturalHeight}px`;
+        previewRow.classList.add('show');
+        statusEl.textContent = 'Menganalisis warna…';
+        grid.classList.remove('show');
+        actions.classList.remove('show');
+        paletteHead.classList.remove('show');
+
+        setTimeout(() => {
+          const pixels = samplePixels(img);
+          const colors = quantize(pixels, K);
+          renderPalette(colors);
+          statusEl.textContent = `Ditemukan ${colors.length} warna dominan.`;
+          paletteHead.classList.add('show');
+          actions.classList.add('show');
+        }, 30);
+      };
+      img.onerror = () => { statusEl.textContent = 'Gambar tidak bisa dibaca. Coba berkas lain.'; };
+      img.src = url;
+    }
+
+    function samplePixels(img){
+      const maxDim = 140;
+      const scale = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight));
+      const w = Math.max(1, Math.round(img.naturalWidth * scale));
+      const h = Math.max(1, Math.round(img.naturalHeight * scale));
+      canvas.width = w; canvas.height = h;
+      ctx.drawImage(img, 0, 0, w, h);
+      const data = ctx.getImageData(0, 0, w, h).data;
+      const pixels = [];
+      for (let i = 0; i < data.length; i += 4){
+        if (data[i+3] < 128) continue; // lewati piksel transparan
+        pixels.push([data[i], data[i+1], data[i+2]]);
+      }
+      return pixels.length ? pixels : [[128,128,128]];
+    }
+
+    function quantize(pixels, k, iterations = 8){
+      k = Math.min(k, pixels.length);
+      const step = Math.max(1, Math.floor(pixels.length / k));
+      let centroids = [];
+      for (let i = 0; i < k; i++) centroids.push(pixels[Math.min(i * step, pixels.length - 1)].slice());
+
+      let assignments = new Array(pixels.length).fill(0);
+      for (let iter = 0; iter < iterations; iter++){
+        for (let p = 0; p < pixels.length; p++){
+          let best = 0, bestDist = Infinity;
+          for (let c = 0; c < centroids.length; c++){
+            const dr = pixels[p][0]-centroids[c][0], dg = pixels[p][1]-centroids[c][1], db = pixels[p][2]-centroids[c][2];
+            const dist = dr*dr + dg*dg + db*db;
+            if (dist < bestDist){ bestDist = dist; best = c; }
+          }
+          assignments[p] = best;
+        }
+        const sums = Array.from({length: centroids.length}, () => [0,0,0,0]);
+        for (let p = 0; p < pixels.length; p++){
+          const c = assignments[p];
+          sums[c][0] += pixels[p][0]; sums[c][1] += pixels[p][1]; sums[c][2] += pixels[p][2]; sums[c][3]++;
+        }
+        for (let c = 0; c < centroids.length; c++){
+          if (sums[c][3] > 0) centroids[c] = [sums[c][0]/sums[c][3], sums[c][1]/sums[c][3], sums[c][2]/sums[c][3]];
+        }
+      }
+      const counts = new Array(centroids.length).fill(0);
+      for (let p = 0; p < pixels.length; p++) counts[assignments[p]]++;
+      return centroids
+        .map((c, i) => ({ r: Math.round(c[0]), g: Math.round(c[1]), b: Math.round(c[2]), count: counts[i] }))
+        .filter(c => c.count > 0)
+        .sort((a, b) => b.count - a.count)
+        .map(c => ({ ...c, pct: Math.round((c.count / pixels.length) * 100) }));
+    }
+
+    function rgbToHex(r,g,b){
+      return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('').toUpperCase();
+    }
+
+    function rgbToHsl(r,g,b){
+      r/=255; g/=255; b/=255;
+      const max = Math.max(r,g,b), min = Math.min(r,g,b);
+      let h, s, l = (max+min)/2;
+      if (max === min){ h = s = 0; }
+      else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2-max-min) : d / (max+min);
+        switch(max){
+          case r: h = (g-b)/d + (g<b?6:0); break;
+          case g: h = (b-r)/d + 2; break;
+          case b: h = (r-g)/d + 4; break;
+        }
+        h /= 6;
+      }
+      return [h*360, s*100, l*100];
+    }
+
+    const hueBands = [
+      {max:15, name:"Merah"}, {max:45, name:"Jingga"}, {max:70, name:"Kuning"},
+      {max:150, name:"Hijau"}, {max:200, name:"Tosca"}, {max:255, name:"Biru"},
+      {max:290, name:"Nila"}, {max:330, name:"Ungu"}, {max:345, name:"Merah Muda"},
+      {max:360, name:"Merah"}
+    ];
+    const lightPrefix = ["Pucat","Lembut","Susu"];
+    const darkPrefix = ["Gelap","Malam","Arang"];
+    const suffixPool = ["Senja","Kabut","Embun","Debu","Karang","Awan","Tanah","Laut","Ladang"];
+
+    function nameColor(r,g,b){
+      const [h,s,l] = rgbToHsl(r,g,b);
+      const hashVal = r*31 + g*17 + b*7;
+      if (s < 10){
+        if (l > 85) return "Putih Gading";
+        if (l > 65) return "Abu Terang";
+        if (l > 35) return "Abu";
+        if (l > 15) return "Abu Gelap";
+        return "Hitam Arang";
+      }
+      let base = "Merah";
+      for (const band of hueBands){ if (h <= band.max){ base = band.name; break; } }
+      let prefix = "";
+      if (l > 78) prefix = lightPrefix[hashVal % lightPrefix.length];
+      else if (l < 28) prefix = darkPrefix[hashVal % darkPrefix.length];
+      const parts = [];
+      if (prefix) parts.push(prefix);
+      parts.push(base);
+      if (hashVal % 3 === 0) parts.push(suffixPool[hashVal % suffixPool.length]);
+      return parts.join(" ");
+    }
+
+    function copyText(text){
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        return navigator.clipboard.writeText(text);
+      }
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      return Promise.resolve();
+    }
+
+    function renderPalette(colors){
+      grid.innerHTML = '';
+      colors.forEach((c, i) => {
+        const hex = rgbToHex(c.r, c.g, c.b);
+        const name = nameColor(c.r, c.g, c.b);
+        const chip = document.createElement('div');
+        chip.className = 'chip';
+        chip.style.animationDelay = (i * 60) + 'ms';
+        chip.innerHTML = `
+          <div class="pct">${c.pct}%</div>
+          <div class="hole"></div>
+          <div class="swatch" style="background:${hex}"></div>
+          <div class="tear"></div>
+          <div class="body">
+            <div class="name">${name}</div>
+            <div class="hex">${hex}</div>
+            <div class="rgb">rgb(${c.r}, ${c.g}, ${c.b})</div>
+          </div>
+          <div class="stamp"><span>Disalin</span></div>
+        `;
+        chip.addEventListener('click', () => {
+          copyText(hex);
+          chip.classList.add('copied');
+          setTimeout(() => chip.classList.remove('copied'), 900);
+        });
+        grid.appendChild(chip);
+      });
+      grid.classList.add('show');
+
+      copyAllBtn.onclick = () => {
+        const text = colors.map(c => `${nameColor(c.r,c.g,c.b)}\t${rgbToHex(c.r,c.g,c.b)}\trgb(${c.r}, ${c.g}, ${c.b})`).join('\n');
+        copyText(text);
+        const original = copyAllBtn.textContent;
+        copyAllBtn.textContent = 'Tersalin!';
+        setTimeout(() => { copyAllBtn.textContent = original; }, 1200);
+      };
+    }
+  </script>
+</body>
+</html>
